@@ -34,12 +34,12 @@ func main() {
 	}
 
 
-	db, err := dbm.NewGoLevelDB("test.db", ".")
+	db, err := dbm.NewGoLevelDB("test", ".")
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
-	mtree, err := iavl.NewMutableTreeWithOpts(db, dbm.NewMemDB(), InitCacheSize, iavl.PruningOptions(100000, 1))
+	mtree, err := iavl.NewMutableTree(db, InitCacheSize)
 	if err != nil {
 		panic(err)
 	}
@@ -55,16 +55,20 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("Load: %d\n", n)
+	itree, err := mtree.GetImmutable(n)
+	if err != nil {
+		panic(err)
+	}
 	sampleFilename := os.Args[2]
 	var totalRun int
 	if os.Args[1] == "rp" {
 		totalRun = util.ReadSamples(sampleFilename, kvCount, func(batch []util.KVPair) {
-			checkPar(mtree, batch)
+			checkPar(itree, batch)
 		})
 	}
 	if os.Args[1] == "rs" {
 		totalRun = util.ReadSamples(sampleFilename, kvCount, func(batch []util.KVPair) {
-			checkSer(mtree, batch)
+			checkSer(itree, batch)
 		})
 	}
 	fmt.Printf("totalRun: %d\n", totalRun)
@@ -84,24 +88,25 @@ func RandomWrite(mtree *iavl.MutableTree, rs randsrc.RandSrc, count int) {
 		for j := 0; j < BatchSize; j++ {
 			k := rs.GetBytes(32)
 			v := rs.GetBytes(32)
-			s := fmt.Sprintf("SAMPLE %s %s\n", base64.StdEncoding.EncodeToString(k),
-				base64.StdEncoding.EncodeToString(v))
-			_, err := file.Write([]byte(s))
-			if err != nil {
-				panic(err)
+			if j == SamplePos {
+				s := fmt.Sprintf("SAMPLE %s %s\n", base64.StdEncoding.EncodeToString(k),
+					base64.StdEncoding.EncodeToString(v))
+				_, err := file.Write([]byte(s))
+				if err != nil {
+					panic(err)
+				}
 			}
-			//if j == SamplePos {
-			//}
 			mtree.Set(k, v)
 		}
-	}
-	_, _, err = mtree.SaveVersion()
-	if err != nil {
-		panic(err)
+		_, n, err := mtree.SaveVersion()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("SaveVersion %d\n", n)
 	}
 }
 
-func checkPar(mtree *iavl.MutableTree, batch []util.KVPair) {
+func checkPar(itree *iavl.ImmutableTree, batch []util.KVPair) {
 	if len(batch) != util.ReadBatchSize {
 		panic(fmt.Sprintf("invalid size %d %d", len(batch), util.ReadBatchSize))
 	}
@@ -110,7 +115,7 @@ func checkPar(mtree *iavl.MutableTree, batch []util.KVPair) {
 		wg.Add(1)
 		go func(start, end int) {
 			for _, pair := range batch[start:end] {
-				_, v := mtree.GetVersioned(pair.Key, 1)
+				_, v := itree.Get(pair.Key)
 				if !bytes.Equal(v, pair.Value) {
 					fmt.Printf("Not Equal for %v: ref: %v actual: %v\n", pair.Key, pair.Value, v)
 				}
@@ -121,12 +126,12 @@ func checkPar(mtree *iavl.MutableTree, batch []util.KVPair) {
 	wg.Wait()
 }
 
-func checkSer(mtree *iavl.MutableTree, batch []util.KVPair) {
+func checkSer(itree *iavl.ImmutableTree, batch []util.KVPair) {
 	if len(batch) != util.ReadBatchSize {
 		panic("invalid size")
 	}
 	for _, pair := range batch {
-		_, v := mtree.GetVersioned(pair.Key, 1)
+		_, v := itree.Get(pair.Key)
 		if !bytes.Equal(v, pair.Value) {
 			fmt.Printf("Not Equal for %v: ref: %v actual: %v\n", pair.Key, pair.Value, v)
 		}

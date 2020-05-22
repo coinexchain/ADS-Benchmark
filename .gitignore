@@ -19,3 +19,5 @@
 *.log
 *.swp
 goleveldb/goleveldb
+mpt/mpt
+iavl/iavl

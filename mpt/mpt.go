@@ -101,26 +101,26 @@ func RandomWrite(tree *trie.Trie, triedb *trie.Database, rs randsrc.RandSrc, cou
 		for j := 0; j < BatchSize; j++ {
 			k := rs.GetBytes(32)
 			v := rs.GetBytes(32)
-			s := fmt.Sprintf("SAMPLE %s %s\n", base64.StdEncoding.EncodeToString(k),
-				base64.StdEncoding.EncodeToString(v))
-			_, err := file.Write([]byte(s))
-			if err != nil {
-				panic(err)
+			if j == SamplePos {
+				s := fmt.Sprintf("SAMPLE %s %s\n", base64.StdEncoding.EncodeToString(k),
+					base64.StdEncoding.EncodeToString(v))
+				_, err := file.Write([]byte(s))
+				if err != nil {
+					panic(err)
+				}
 			}
-			//if j == SamplePos {
-			//}
 			tree.Update(k, v)
 			//vv := tree.Get(k)
 			//if !bytes.Equal(v, vv) {
 			//	fmt.Printf("Not Equal\n")
 			//}
 		}
+		root, err = tree.Commit(nil)
+		if err != nil {
+			panic(err)
+		}
+		triedb.Commit(root, false)
 	}
-	root, err = tree.Commit(nil)
-	if err != nil {
-		panic(err)
-	}
-	triedb.Commit(root, false)
 	rootStr := base64.StdEncoding.EncodeToString(root[:])
 	fmt.Printf("ROOT %s\n", rootStr)
 	rootFile.Write([]byte(rootStr))

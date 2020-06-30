@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/tendermint/iavl"
 	dbm "github.com/tendermint/tm-db"
@@ -16,8 +17,10 @@ import (
 )
 
 const (
-	BatchSize = 1000
+	BatchSize = 10000
 	SamplePos = 99
+	SampleStripe = 125
+
 	InitCacheSize = 100000
 )
 
@@ -33,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-
+	fmt.Printf("Before Start %d\n", time.Now().UnixNano())
 	db, err := dbm.NewGoLevelDB("test", ".")
 	if err != nil {
 		panic(err)
@@ -59,6 +62,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("After Load %f\n", float64(time.Now().UnixNano())/1000000000.0)
 	sampleFilename := os.Args[2]
 	var totalRun int
 	if os.Args[1] == "rp" {
@@ -72,6 +77,7 @@ func main() {
 		})
 	}
 	fmt.Printf("totalRun: %d\n", totalRun)
+	fmt.Printf("Finished %f\n", float64(time.Now().UnixNano())/1000000000.0)
 }
 
 func RandomWrite(mtree *iavl.MutableTree, rs randsrc.RandSrc, count int) {
@@ -88,7 +94,7 @@ func RandomWrite(mtree *iavl.MutableTree, rs randsrc.RandSrc, count int) {
 		for j := 0; j < BatchSize; j++ {
 			k := rs.GetBytes(32)
 			v := rs.GetBytes(32)
-			if j == SamplePos {
+			if (j % SampleStripe) == SamplePos {
 				s := fmt.Sprintf("SAMPLE %s %s\n", base64.StdEncoding.EncodeToString(k),
 					base64.StdEncoding.EncodeToString(v))
 				_, err := file.Write([]byte(s))

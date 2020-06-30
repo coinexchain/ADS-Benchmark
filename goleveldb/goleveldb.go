@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/coinexchain/randsrc"
 	dbm "github.com/tendermint/tm-db"
@@ -15,8 +16,9 @@ import (
 )
 
 const (
-	BatchSize = 1000
+	BatchSize = 10000
 	SamplePos = 99
+	SampleStripe = 125
 )
 
 func main() {
@@ -31,6 +33,7 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Printf("Before Start %d\n", time.Now().UnixNano())
 	db, err := dbm.NewGoLevelDB("test", ".")
 	if err != nil {
 		panic(err)
@@ -44,6 +47,7 @@ func main() {
 
 	}
 
+	fmt.Printf("After Load %f\n", float64(time.Now().UnixNano())/1000000000.0)
 	sampleFilename := os.Args[2]
 	var totalRun int
 	if os.Args[1] == "rp" {
@@ -57,6 +61,7 @@ func main() {
 		})
 	}
 	fmt.Printf("totalRun: %d\n", totalRun)
+	fmt.Printf("Finished %f\n", float64(time.Now().UnixNano())/1000000000.0)
 }
 
 func RandomWrite(db dbm.DB, rs randsrc.RandSrc, count int) {
@@ -68,13 +73,13 @@ func RandomWrite(db dbm.DB, rs randsrc.RandSrc, count int) {
 	numBatch := count/BatchSize
 	for i := 0; i < numBatch; i++ {
 		batch := db.NewBatch()
-		if i % 100 == 0 {
+		if i % 20 == 0 {
 			fmt.Printf("Now %d of %d\n", i, numBatch)
 		}
 		for j := 0; j < BatchSize; j++ {
 			k := rs.GetBytes(32)
 			v := rs.GetBytes(32)
-			if j == SamplePos {
+			if (j % SampleStripe) == SamplePos {
 				s := fmt.Sprintf("SAMPLE %s %s\n", base64.StdEncoding.EncodeToString(k),
 					base64.StdEncoding.EncodeToString(v))
 				_, err := file.Write([]byte(s))

@@ -18,6 +18,7 @@
 *.bak
 *.log
 *.swp
+*.db
 goleveldb/goleveldb
 mpt/mpt
 iavl/iavl

@@ -3,6 +3,7 @@ package util
 import (
 	"bufio"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -48,6 +49,9 @@ func ReadSamples(fname string, kvCount int, batchHandler func(batch []KVPair)) i
 			idx = 0
 			batchHandler(readBatch[:])
 			totalRun++
+			if totalRun % 10 == 0 {
+				fmt.Printf("Now %d of %d\n", totalRun, kvCount/ReadBatchSize)
+			}
 			if totalRun*ReadBatchSize >= kvCount {break}
 		}
 	}

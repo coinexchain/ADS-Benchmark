@@ -47,7 +47,8 @@ func main() {
 
 	}
 
-	fmt.Printf("After Load %f\n", float64(time.Now().UnixNano())/1000000000.0)
+	time1 := float64(time.Now().UnixNano())/1000000000.0
+	fmt.Printf("After Load %f\n", time1)
 	sampleFilename := os.Args[2]
 	var totalRun int
 	if os.Args[1] == "rp" {
@@ -61,7 +62,9 @@ func main() {
 		})
 	}
 	fmt.Printf("totalRun: %d\n", totalRun)
-	fmt.Printf("Finished %f\n", float64(time.Now().UnixNano())/1000000000.0)
+	time2 := float64(time.Now().UnixNano())/1000000000.0
+	fmt.Printf("Finished %f\n", time2)
+	fmt.Printf("Time used for reading %f\n", time2-time1)
 }
 
 func RandomWrite(db dbm.DB, rs randsrc.RandSrc, count int) {
